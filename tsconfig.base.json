@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "baseUrl": "./",
+    "rootDir": ".",
+    "outDir": "./dist",
+    "declarationDir": "./dist",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "target": "ES2020",
+    "module": "ES2020",
+    "moduleResolution": "bundler",
+    "lib": ["es2020", "dom", "es2018", "es5", "es6", "dom.iterable"],
+    "paths": {
+      "@agentbridge/api": ["./libs/agentbridge-api/src/index.ts"],
+      "@agentbridge/utils": ["libs/agentbridge-utils/src/index.ts"],
+      "@ownid/sdk": ["./sdk/ts/index.ts"],
+      "@ownid/tools": ["./tools/src/index.ts"],
+      "@ownid/tools/gen-di": ["./tools/src/index.ts"],
+      "@ownid/ts-utils": ["./libs/ts-utils/src/index.ts"],
+      "@ownid/ui": ["./sdk/ts/src/ui-library/index.ts"],
+      "@ownid/web": ["./sdk/web/src/index.ts"]
+    },
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "exclude": ["node_modules", "dist"]
+}

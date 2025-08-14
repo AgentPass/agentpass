@@ -1,0 +1,757 @@
+openapi: 3.0.3
+info:
+  description: |
+    You can use Spotify's Web API to discover music and podcasts, manage your Spotify library, control audio playback, and much more. Browse our available Web API endpoints using the sidebar at left, or via the navigation bar on top of this page on smaller screens.
+
+    In order to make successful Web API requests your app will need a valid access token. One can be obtained through <a href="https://developer.spotify.com/documentation/general/guides/authorization-guide/">OAuth 2.0</a>.
+
+    The base URI for all Web API requests is `https://api.spotify.com/v1`.
+
+    Need help? See our <a href="https://developer.spotify.com/documentation/web-api/guides/">Web API guides</a> for more information, or visit the <a href="https://community.spotify.com/t5/Spotify-for-Developers/bd-p/Spotify_Developer">Spotify for Developers community forum</a> to ask questions and connect with other developers.
+  version: 2024.12.23
+  title: Spotify
+  termsOfService: https://developer.spotify.com/terms/
+  contact:
+    name: sonallux
+    url: https://github.com/sonallux/spotify-web-api
+servers:
+  - url: https://api.spotify.com/v1
+tags:
+  - name: Player
+  - name: Search
+paths:
+  /search:
+    get:
+      tags:
+        - Search
+      operationId: search
+      summary: |
+        Search for Item
+      description: |
+        Get Spotify catalog information about albums, artists, playlists, tracks, shows, episodes or audiobooks
+        that match a keyword string. Audiobooks are only available within the US, UK, Canada, Ireland, New Zealand and Australia markets.
+      parameters:
+        - name: q
+          required: true
+          in: query
+          schema:
+            title: Query
+            description: |
+              Your search query.
+
+              You can narrow down your search using field filters. The available filters are `album`, `artist`, `track`, `year`, `upc`, `tag:hipster`, `tag:new`, `isrc`, and `genre`. Each field filter only applies to certain result types.
+
+              The `artist` and `year` filters can be used while searching albums, artists and tracks. You can filter on a single `year` or a range (e.g. 1955-1960).<br />
+              The `album` filter can be used while searching albums and tracks.<br />
+              The `genre` filter can be used while searching artists and tracks.<br />
+              The `isrc` and `track` filters can be used while searching tracks.<br />
+              The `upc`, `tag:new` and `tag:hipster` filters can only be used while searching albums. The `tag:new` filter will return albums released in the past two weeks and `tag:hipster` can be used to return only albums with the lowest 10% popularity.<br />
+            example: remaster%20track:Doxy%20artist:Miles%20Davis
+            type: string
+        - name: type
+          required: true
+          explode: false
+          in: query
+          schema:
+            title: Item type
+            description: |
+              A comma-separated list of item types to search across. Search results include hits
+              from all the specified item types. For example: `q=abacab&type=album,track` returns
+              both albums and tracks matching "abacab".
+            items:
+              type: string
+              enum:
+                - album
+                - artist
+                - playlist
+                - track
+                - show
+                - episode
+                - audiobook
+            type: array
+        - $ref: "#/components/parameters/QueryMarket"
+        - name: limit
+          required: false
+          in: query
+          schema:
+            title: Limit
+            description: |
+              The maximum number of results to return in each item type.
+            default: 20
+            example: 10
+            type: integer
+            minimum: 1
+            maximum: 50
+        - name: offset
+          required: false
+          in: query
+          schema:
+            title: Offset
+            description: |
+              The index of the first result to return. Use
+              with limit to get the next page of search results.
+            default: 0
+            minimum: 0
+            maximum: 1000
+            example: 5
+            type: integer
+        - name: include_external
+          required: false
+          in: query
+          schema:
+            title: Include External
+            description: |
+              If `include_external=audio` is specified it signals that the client can play externally hosted audio content, and marks
+              the content as playable in the response. By default externally hosted audio content is marked as unplayable in the response.
+            type: string
+            enum:
+              - audio
+      responses:
+        "200":
+          $ref: "#/components/responses/SearchItems"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      security:
+        - oauth_2_0: []
+  /me/player/devices:
+    get:
+      tags:
+        - Player
+      operationId: get-a-users-available-devices
+      summary: |
+        Get Available Devices
+      description: |
+        Get information about a user's available Spotify Connect devices. Some device models are not supported and will not be listed in the API response.
+      responses:
+        "200":
+          $ref: "#/components/responses/DevicesObject"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      security:
+        - oauth_2_0:
+            - user-read-playback-state
+  /me/player:
+    get:
+      tags:
+        - Player
+      operationId: get-the-users-currently-player
+      summary: |
+        Get Playback State
+      description: |
+        Get information about the user's current playback state, including track or episode, progress, and active device.
+      parameters:
+        - $ref: "#/components/parameters/QueryMarket"
+        - $ref: "#/components/parameters/QueryAdditionalTypes"
+      responses:
+        "200":
+          $ref: "#/components/responses/CurrentlyPlayingContextObject"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      security:
+        - oauth_2_0:
+            - user-read-playback-state
+    put:
+      tags:
+        - Player
+      operationId: transfer-a-users-playback
+      summary: |
+        Transfer Playback
+      description: |
+        Transfer playback to a new device and determine if it should start playing.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - device_ids
+              example:
+                device_ids:
+                  - 74ASZWbe4lXaubB36ztrGX
+                play: false
+              type: object
+              properties:
+                device_ids:
+                  type: array
+                  description: |
+                    A JSON array containing the ID of the device on which playback should be started/transferred.<br/>For example:`{device_ids:["74ASZWbe4lXaubB36ztrGX"]}`<br/>_**Note**: The request will still succeed if the given `device_id` is not valid in the list of available devices._
+                  items:
+                    type: string
+                play:
+                  type: boolean
+                  description: |
+                    **true**: ensure playback happens on new device.<br/>**false** or not provided: keep the current playback state.
+        required: true
+      responses:
+        "204":
+          description: Playback transferred
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      security:
+        - oauth_2_0:
+            - user-modify-playback-state
+  /me/player/play:
+    put:
+      tags:
+        - Player
+      operationId: start-a-users-playback
+      summary: |
+        Start/Resume Playback
+      description: |
+        Start a new context or resume current playback on the user's active device.
+      parameters:
+        - name: device_id
+          required: false
+          in: query
+          schema:
+            title: Device ID
+            description: |
+              The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example:
+                context_uri: spotify:album:1Je1IMUlBXcx1Fz0WE7oPT
+                offset:
+                  position: 5
+                position_ms: 0
+              type: object
+              properties:
+                context_uri:
+                  type: string
+                  description: |
+                    Spotify URI of the context to play. Valid contexts are albums, artists, playlists.<br/>Example: `{context_uri:"spotify:album:1Je1IMUlBXcx1Fz0WE7oPT"}`<br/>_**Note**: The context URI may not be used if uris are being sent._
+                uris:
+                  type: array
+                  description: |
+                    A JSON array of the Spotify track URIs to play.<br/>Example: `{"uris": ["spotify:track:4iV5W9uYEdYUVa79Axb7Rh", "spotify:track:1301WleyT98MSxVHPZCA6M"]}`<br/>_**Note**: uris may not be used if a context_uri is being set._
+                  items:
+                    type: string
+                offset:
+                  type: object
+                  description: |
+                    Indicates from where in the context playback should start. Only available when context_uri corresponds to an album or playlist object<br/>Example: `{"offset": {"position": 5}}`<br/
+                    >Example: `{"offset": {"uri": "spotify:track:1301WleyT98MSxVHPZCA6M"}}`<br/>
+                  additionalProperties: {}
+                position_ms:
+                  type: integer
+                  description: |
+                    The position in milliseconds to start playback. Passing in a position that is greater than the length of the track will cause the player to start playing the next song.
+      responses:
+        "204":
+          description: Playback started
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      security:
+        - oauth_2_0:
+            - user-modify-playback-state
+  /me/player/pause:
+    put:
+      tags:
+        - Player
+      operationId: pause-a-users-playback
+      summary: |
+        Pause Playback
+      description: |
+        Pause playback on the user's account.
+      parameters:
+        - name: device_id
+          required: false
+          in: query
+          schema:
+            title: Device ID
+            description: |
+              The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+            type: string
+      responses:
+        "204":
+          description: Playback paused
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      security:
+        - oauth_2_0:
+            - user-modify-playback-state
+  /me/player/next:
+    post:
+      tags:
+        - Player
+      operationId: skip-users-playback-to-next-track
+      summary: |
+        Skip To Next
+      description: |
+        Skips to next track in the user's queue.
+      parameters:
+        - name: device_id
+          required: false
+          in: query
+          schema:
+            title: Device ID
+            description: |
+              The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+            type: string
+      responses:
+        "204":
+          description: Command sent
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      security:
+        - oauth_2_0:
+            - user-modify-playback-state
+  /me/player/previous:
+    post:
+      tags:
+        - Player
+      operationId: skip-users-playback-to-previous-track
+      summary: |
+        Skip To Previous
+      description: |
+        Skips to previous track in the user's queue.
+      parameters:
+        - name: device_id
+          required: false
+          in: query
+          schema:
+            title: Device ID
+            description: |
+              The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+            type: string
+      responses:
+        "204":
+          description: Command sent
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      security:
+        - oauth_2_0:
+            - user-modify-playback-state
+  /me/player/currently-playing:
+    get:
+      tags:
+        - Player
+      operationId: get-the-users-currently-playing-track
+      summary: |
+        Get Currently Playing Track
+      description: |
+        Get the object currently being played on the user's Spotify account.
+      parameters:
+        - $ref: "#/components/parameters/QueryMarket"
+        - $ref: "#/components/parameters/QueryAdditionalTypes"
+      responses:
+        "200":
+          $ref: "#/components/responses/CurrentlyPlaying"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      security:
+        - oauth_2_0:
+            - user-read-currently-playing
+  /me/player/queue:
+    get:
+      tags:
+        - Player
+      operationId: get-queue
+      summary: |
+        Get the User's Queue
+      description: |
+        Get the list of objects that make up the user's queue.
+      responses:
+        "200":
+          $ref: "#/components/responses/QueueObject"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      security:
+        - oauth_2_0:
+            - user-read-playback-state
+    post:
+      tags:
+        - Player
+      operationId: add-to-queue
+      summary: |
+        Add Item to Playback Queue
+      description: |
+        Add an item to the end of the user's current playback queue.
+      parameters:
+        - name: uri
+          required: true
+          in: query
+          schema:
+            title: Spotify URI
+            description: |
+              The uri of the item to add to the queue. Must be a track or an episode uri.
+            type: string
+        - name: device_id
+          required: false
+          in: query
+          schema:
+            title: Device ID
+            description: |
+              The id of the device this command is targeting. If not supplied, the user's currently active device is the target.
+            type: string
+      responses:
+        "204":
+          description: Command received
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+      security:
+        - oauth_2_0:
+            - user-modify-playback-state
+components:
+  securitySchemes:
+    oauth_2_0:
+      type: oauth2
+      description: Spotify supports OAuth 2.0 for authenticating all API requests.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://accounts.spotify.com/authorize
+          tokenUrl: https://accounts.spotify.com/api/token
+          scopes:
+            app-remote-control: |
+              Communicate with the Spotify app on your device.
+            playlist-read-private: |
+              Access your private playlists.
+            playlist-read-collaborative: |
+              Access your collaborative playlists.
+            playlist-modify-public: |
+              Manage your public playlists.
+            playlist-modify-private: |
+              Manage your private playlists.
+            user-library-read: |
+              Access your saved content.
+            user-library-modify: |
+              Manage your saved content.
+            user-read-private: |
+              Access your subscription details.
+            user-read-email: |
+              Get your real email address.
+            user-follow-read: |
+              Access your followers and who you are following.
+            user-follow-modify: |
+              Manage your saved content.
+            user-top-read: |
+              Read your top artists and content.
+            user-read-playback-position: |
+              Read your position in content you have played.
+            user-read-playback-state: |
+              Read your currently playing content and Spotify Connect devices information.
+            user-read-recently-played: |
+              Access your recently played items.
+            user-read-currently-playing: |
+              Read your currently playing content.
+            user-modify-playback-state: |
+              Control playback on your Spotify clients and Spotify Connect devices.
+            ugc-image-upload: |
+              Upload images to Spotify on your behalf.
+            streaming: |
+              Play content and control playback on your other devices.
+  # Keep all required components for the above paths
+  parameters:
+    QueryMarket:
+      name: market
+      required: false
+      in: query
+      schema:
+        title: Market
+        description: |
+          An [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) country code. If a country code is specified, only content that is available in that market will be returned.
+          If a valid user access token is specified in the request header, the country associated with the user account will take priority over this parameter.
+          _**Note**: If neither market or user country are provided, the content is considered unavailable for the client._
+          _**Users must have granted the `user-read-private` scope to use this parameter**_
+        example: ES
+        type: string
+    QueryAdditionalTypes:
+      name: additional_types
+      required: false
+      in: query
+      schema:
+        title: Additional Types
+        description: |
+          A comma-separated list of item types that your client supports besides the default `track` type. Valid types are: `track` and `episode`.<br/>
+          _**Note**: This parameter was introduced to allow existing clients to maintain their current behaviour and might be deprecated in the future._<br/>
+          In addition to providing this parameter, make sure that your client properly handles cases of new types in the future by checking against the `type` field of each object.
+        example: "track,episode"
+        type: string
+  # Include only the necessary responses
+  responses:
+    SearchItems:
+      description: Search response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              tracks:
+                $ref: "#/components/schemas/PagingObject"
+              artists:
+                $ref: "#/components/schemas/PagingObject"
+              albums:
+                $ref: "#/components/schemas/PagingObject"
+              playlists:
+                $ref: "#/components/schemas/PagingObject"
+              shows:
+                $ref: "#/components/schemas/PagingObject"
+              episodes:
+                $ref: "#/components/schemas/PagingObject"
+              audiobooks:
+                $ref: "#/components/schemas/PagingObject"
+    DevicesObject:
+      description: Information about available devices
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              devices:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeviceObject"
+    CurrentlyPlayingContextObject:
+      description: Information about the user's current playback state
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              device:
+                $ref: "#/components/schemas/DeviceObject"
+              repeat_state:
+                type: string
+              shuffle_state:
+                type: boolean
+              context:
+                $ref: "#/components/schemas/ContextObject"
+              timestamp:
+                type: integer
+              progress_ms:
+                type: integer
+              is_playing:
+                type: boolean
+              item:
+                $ref: "#/components/schemas/TrackObject"
+              currently_playing_type:
+                type: string
+              actions:
+                $ref: "#/components/schemas/DisallowsObject"
+    CurrentlyPlaying:
+      description: Information about the user's currently playing track
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              context:
+                $ref: "#/components/schemas/ContextObject"
+              timestamp:
+                type: integer
+              progress_ms:
+                type: integer
+              is_playing:
+                type: boolean
+              item:
+                $ref: "#/components/schemas/TrackObject"
+              currently_playing_type:
+                type: string
+              actions:
+                $ref: "#/components/schemas/DisallowsObject"
+    QueueObject:
+      description: Information about the user's queue
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              currently_playing:
+                type: object
+              queue:
+                type: array
+                items:
+                  type: object
+    Unauthorized:
+      description: Error response when access token is invalid
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorObject"
+    Forbidden:
+      description: Error response when access token does not have sufficient scope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorObject"
+    TooManyRequests:
+      description: Error response when request exceeded rate limits
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorObject"
+  # Include only necessary schemas
+  schemas:
+    ErrorObject:
+      type: object
+      properties:
+        status:
+          type: integer
+        message:
+          type: string
+    PagingObject:
+      type: object
+      properties:
+        href:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+        limit:
+          type: integer
+        next:
+          type: string
+        offset:
+          type: integer
+        previous:
+          type: string
+        total:
+          type: integer
+    DeviceObject:
+      type: object
+      properties:
+        id:
+          type: string
+        is_active:
+          type: boolean
+        is_private_session:
+          type: boolean
+        is_restricted:
+          type: boolean
+        name:
+          type: string
+        type:
+          type: string
+        volume_percent:
+          type: integer
+    ContextObject:
+      type: object
+      properties:
+        type:
+          type: string
+        href:
+          type: string
+        external_urls:
+          type: object
+        uri:
+          type: string
+    TrackObject:
+      type: object
+      properties:
+        album:
+          type: object
+        artists:
+          type: array
+          items:
+            type: object
+        available_markets:
+          type: array
+          items:
+            type: string
+        disc_number:
+          type: integer
+        duration_ms:
+          type: integer
+        explicit:
+          type: boolean
+        external_ids:
+          type: object
+        external_urls:
+          type: object
+        href:
+          type: string
+        id:
+          type: string
+        is_playable:
+          type: boolean
+        linked_from:
+          type: object
+        restrictions:
+          type: object
+        name:
+          type: string
+        popularity:
+          type: integer
+        preview_url:
+          type: string
+        track_number:
+          type: integer
+        type:
+          type: string
+        uri:
+          type: string
+        is_local:
+          type: boolean
+    DisallowsObject:
+      type: object
+      properties:
+        disallows:
+          type: object
+          properties:
+            interrupting_playback:
+              type: boolean
+            pausing:
+              type: boolean
+            resuming:
+              type: boolean
+            seeking:
+              type: boolean
+            skipping_next:
+              type: boolean
+            skipping_prev:
+              type: boolean
+            toggling_repeat_context:
+              type: boolean
+            toggling_shuffle:
+              type: boolean
+            toggling_repeat_track:
+              type: boolean
+            transferring_playback:
+              type: boolean

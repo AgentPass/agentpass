@@ -1,0 +1,33 @@
+{
+  "name": "@agentbridge/api",
+  "$schema": "../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/agentbridge-api/src",
+  "projectType": "library",
+  "tags": ["typescript", "scope:agentbridge", "scope:client"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/libs/agentbridge-api",
+        "main": "libs/agentbridge-api/src/index.ts",
+        "tsConfig": "libs/agentbridge-api/tsconfig.json"
+      }
+    },
+    "generate-api-lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "fix": true,
+        "config": "{projectRoot}/eslint.config.mjs",
+        "lintFilePatterns": ["{projectRoot}/src/**/*.{ts,tsx,js,jsx}", "{projectRoot}/package.json"]
+      },
+      "dependsOn": ["generate-api"]
+    },
+    "generate-api": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "libs/agentbridge-api/scripts/gen-api.sh"
+      },
+      "inputs": []
+    }
+  }
+}
