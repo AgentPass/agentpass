@@ -1,0 +1,120 @@
+{
+  "name": "@agentbridge/be",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/agentbridge-be/src",
+  "projectType": "application",
+  "tags": ["typescript-cd", "scope:agentbridge", "node"],
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "development",
+      "options": {
+        "main": "apps/agentbridge-be/src/main.ts",
+        "outputPath": "dist/apps/agentbridge-be",
+        "outputFileName": "main.js",
+        "tsConfig": "apps/agentbridge-be/tsconfig.app.json",
+        "platform": "node",
+        "format": ["cjs"],
+        "sourcemap": "both"
+      },
+      "dependsOn": ["prisma-generate-format"],
+      "configurations": {
+        "development": {
+          "minify": false
+        },
+        "production": {
+          "minify": true,
+          "thirdParty": true
+        }
+      }
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "buildTarget": "@agentbridge/be:build",
+        "watch": true,
+        "inspect": false
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "dependsOn": ["prisma-validate"]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "apps/agentbridge-be/jest.config.ts",
+        "passWithNoTests": true
+      },
+      "configurations": {
+        "ci": {
+          "ci": true,
+          "codeCoverage": true
+        }
+      }
+    },
+    "prisma-deploy": {
+      "executor": "@nx-tools/nx-prisma:deploy"
+    },
+    "prisma-format": {
+      "executor": "@nx-tools/nx-prisma:format"
+    },
+    "prisma-generate-format": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "nx format"
+      },
+      "dependsOn": ["prisma-generate"]
+    },
+    "prisma-generate": {
+      "executor": "@nx-tools/nx-prisma:generate"
+    },
+    "prisma-migrate": {
+      "executor": "@nx-tools/nx-prisma:migrate"
+    },
+    "prisma-pull": {
+      "executor": "@nx-tools/nx-prisma:pull"
+    },
+    "prisma-push": {
+      "executor": "@nx-tools/nx-prisma:push"
+    },
+    "prisma-reset": {
+      "executor": "@nx-tools/nx-prisma:reset"
+    },
+    "prisma-resolve": {
+      "executor": "@nx-tools/nx-prisma:resolve"
+    },
+    "prisma-status": {
+      "executor": "@nx-tools/nx-prisma:status"
+    },
+    "prisma-studio": {
+      "executor": "@nx-tools/nx-prisma:studio"
+    },
+    "prisma-validate": {
+      "executor": "@nx-tools/nx-prisma:validate"
+    },
+    "db:encrypt": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx tsx apps/agentbridge-be/scripts/db-encrypt.ts encrypt"
+      }
+    },
+    "db:decrypt": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx tsx apps/agentbridge-be/scripts/db-encrypt.ts decrypt"
+      }
+    },
+    "admin-add": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx tsx scripts/admin-add.ts",
+        "cwd": "apps/agentbridge-be"
+      }
+    }
+  }
+}

@@ -1,0 +1,92 @@
+/* generated using openapi-typescript-codegen -- do not edit */
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+const HTTP_NETWORK = 0;
+const HTTP_OK = 200;
+const HTTP_ACCEPTED = 201;
+const HTTP_CREATED = 202;
+const HTTP_NO_CONTENT = 204;
+const HTTP_REDIRECT = 302;
+const HTTP_FORBIDDEN = 403;
+const HTTP_CONFLICT = 409;
+const HTTP_LOCKED = 423;
+const HTTP_FAILED_DEPENDENCY = 424;
+const HTTP_TOO_MANY_REQUESTS = 429;
+
+type ErrorType = Omit<string | object, "">;
+
+export interface ApiResult<T> {
+  readonly url: string;
+  readonly httpCode: number;
+  readonly responseHeaders: Headers;
+  readonly body: T | undefined;
+  readonly error: ErrorType | undefined;
+}
+
+interface ApiSuccessResponse<TResBody, THttpCode extends number> extends ApiResult<TResBody> {
+  readonly httpCode: THttpCode;
+  readonly error: undefined;
+}
+
+interface ApiSuccessWithBodyResponse<TResBody, THttpCode extends number>
+  extends ApiSuccessResponse<TResBody, THttpCode> {
+  readonly body: TResBody;
+}
+
+export type ApiOkResponse<T> = ApiSuccessWithBodyResponse<T, typeof HTTP_OK>;
+
+export type ApiCreatedResponse<T> = ApiSuccessWithBodyResponse<T, typeof HTTP_CREATED>;
+
+export type ApiAcceptedResponse<T> = ApiSuccessWithBodyResponse<T, typeof HTTP_ACCEPTED>;
+
+export interface ApiOkEmptyResponse extends ApiResult<never> {
+  readonly httpCode: typeof HTTP_NO_CONTENT;
+  readonly error: undefined;
+}
+
+export interface ApiRedirectResponse extends ApiResult<never> {
+  readonly httpCode: typeof HTTP_REDIRECT;
+  readonly error: undefined;
+}
+
+interface ApiGenericErrorResponse extends ApiResult<unknown> {
+  readonly error: ErrorType;
+}
+
+export interface ApiErrorResponse<THttpCode extends number> extends ApiGenericErrorResponse {
+  readonly httpCode: THttpCode;
+}
+
+interface ApiErrorExcludingResponse<THttpCode extends number> extends ApiGenericErrorResponse {
+  readonly httpCode: Exclude<number, THttpCode>;
+}
+
+export interface ApiErrorWithBodyResponse<TResBody, THttpCode extends number> extends ApiResult<TResBody> {
+  readonly httpCode: THttpCode;
+  readonly error: ErrorType;
+}
+
+export type ApiForbiddenResponse<TResBody> = ApiErrorWithBodyResponse<TResBody, typeof HTTP_FORBIDDEN>;
+
+export type ApiConflictResponse = ApiErrorResponse<typeof HTTP_FORBIDDEN>;
+
+export type ApiLockedResponse = ApiErrorResponse<typeof HTTP_LOCKED>;
+
+export type ApiFailedDependencyResponse = ApiErrorResponse<typeof HTTP_FAILED_DEPENDENCY>;
+
+export type ApiTooManyRequestsResponse = ApiErrorResponse<typeof HTTP_TOO_MANY_REQUESTS>;
+
+export interface ApiNetworkErrorResponse extends ApiErrorResponse<typeof HTTP_NETWORK> {
+  error: {
+    exception: string | object;
+  };
+}
+
+export interface ApiUnmappedResponse extends ApiErrorResponse<number> {
+  readonly httpCode: number;
+  readonly error: {
+    message: "Unmapped response http code";
+    originalError: ErrorType | undefined;
+  };
+}

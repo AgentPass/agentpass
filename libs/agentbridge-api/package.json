@@ -1,0 +1,10 @@
+{
+  "name": "@agentbridge/api",
+  "version": "0.0.1",
+  "private": true,
+  "sideEffects": false,
+  "main": "./src/index.js",
+  "nx": {
+    "name": "ab-api"
+  }
+}

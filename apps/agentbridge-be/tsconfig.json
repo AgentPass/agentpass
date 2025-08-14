@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.paths.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node", "express", "jest"],
+    "target": "ES2020",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "lib": ["ESNext"],
+    "noEmitOnError": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "strictFunctionTypes": true
+  },
+  "references": [
+    {
+      "path": "../../libs/agentbridge-api"
+    }
+  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

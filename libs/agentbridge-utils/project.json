@@ -1,0 +1,20 @@
+{
+  "name": "@agentbridge/utils",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/agentbridge-utils/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/agentbridge-utils",
+        "main": "libs/agentbridge-utils/src/index.ts",
+        "tsConfig": "libs/agentbridge-utils/tsconfig.lib.json",
+        "assets": ["libs/agentbridge-utils/*.md"]
+      },
+      "dependsOn": ["@agentbridge/be:prisma-generate-format"]
+    }
+  }
+}

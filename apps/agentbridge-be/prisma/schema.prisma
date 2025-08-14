@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator markdown {
+  provider = "prisma-markdown"
+  output   = "./schema.md"
+  title    = "AgentBridge"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id                 String               @id @default(uuid())
+  name               String
+  description        String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  admins             Admin[]
+  apiKeyProviders    ApiKeyProvider[]
+  endUsers           EndUser[]
+  folders            Folder[]
+  mcpServers         McpServer[]
+  oauthProviders     OAuthProvider[]
+  serverJwtProviders ServerJwtProvider[]
+  invitations        TenantInvitation[]
+  tools              Tool[]
+}
+
+model EndUser {
+  id             String          @id @default(uuid())
+  tenantId       String
+  email          String
+  emailVerified  Boolean         @default(false)
+  name           String?
+  givenName      String?
+  familyName     String?
+  picture        String?
+  enabled        Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  ownidData      String?
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  providerTokens ProviderToken[]
+
+  @@unique([email, tenantId])
+}
+
+model Admin {
+  id                  String             @id @default(uuid())
+  tenantId            String
+  email               String             @unique
+  emailVerified       Boolean            @default(false)
+  name                String?
+  givenName           String?
+  familyName          String?
+  picture             String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  enabled             Boolean            @default(false)
+  ownidData           String?
+  role                AdminRole          @default(admin)
+  tenant              Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  acceptedInvitations TenantInvitation[] @relation("AcceptedBy")
+  sentInvitations     TenantInvitation[] @relation("InvitedBy")
+}
+
+model McpServer {
+  id                 String               @id @default(cuid())
+  tenantId           String
+  name               String
+  description        String?
+  enabled            Boolean              @default(true)
+  baseUrl            String               @default("")
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  authConfigId       String?              @unique
+  authType           ServerAuthType       @default(BASE)
+  folders            Folder[]
+  tenant             Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  authConfig         ServerAuthConfig?
+  serverJwtProviders ServerJwtProvider[]
+  tools              Tool[]
+}
+
+model Folder {
+  id             String    @id @default(uuid())
+  tenantId       String
+  name           String
+  parentFolderId String?
+  serverId       String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  parentFolder   Folder?   @relation("FolderHierarchy", fields: [parentFolderId], references: [id])
+  subFolders     Folder[]  @relation("FolderHierarchy")
+  server         McpServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tools          Tool[]
+}
+
+model Tool {
+  id                        String          @id @default(uuid())
+  tenantId                  String
+  name                      String
+  description               String
+  folderId                  String?
+  serverId                  String
+  /// Record<string, OpenAPIV3.ParameterObject>
+  parameters                Json?
+  method                    HttpMethod
+  url                       String
+  /// FormattingConfig
+  responseFormatting        Json?
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+  lastUsedAt                DateTime?
+  /// Record<string, OpenAPIV3.ResponseObject>
+  responses                 Json?
+  apiKeyProviderId          String?
+  oAuthProviderId           String?
+  enabled                   Boolean         @default(true)
+  /// Record<string, string>
+  requestParameterOverrides Json?
+  apiKeyProvider            ApiKeyProvider? @relation(fields: [apiKeyProviderId], references: [id])
+  folder                    Folder?         @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  oAuthProvider             OAuthProvider?  @relation(fields: [oAuthProviderId], references: [id])
+  server                    McpServer       @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  tenant                    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model OAuthProvider {
+  id               String          @id @default(uuid())
+  tenantId         String?
+  name             String
+  clientId         String
+  /// @encrypted
+  clientSecret     String
+  authorizationUrl String
+  tokenUrl         String
+  userInfoUrl      String?
+  scopes           String[]
+  contentType      String?
+  svg              String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  refreshUrl       String?
+  tenant           Tenant?         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  providerTokens   ProviderToken[]
+  tools            Tool[]
+}
+
+model ApiKeyProvider {
+  id        String         @id @default(uuid())
+  tenantId  String?
+  value     String
+  keyName   String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  keyIn     ApiKeyLocation
+  tenant    Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tools     Tool[]
+}
+
+model ProviderToken {
+  id            String         @id @default(uuid())
+  providerId    String?
+  userId        String
+  /// @encrypted
+  accessToken   String
+  /// @encrypted
+  refreshToken  String?
+  scopes        String[]
+  issuedAt      DateTime       @default(now())
+  expiresAt     DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  lastUsedAt    DateTime?
+  originAddress String?
+  provider      OAuthProvider? @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  user          EndUser        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TenantInvitation {
+  id           String           @id @default(uuid())
+  tenantId     String
+  email        String
+  role         TenantRole       @default(admin)
+  status       InvitationStatus @default(pending)
+  invitedById  String
+  acceptedById String?
+  token        String           @unique
+  expiresAt    DateTime
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  acceptedBy   Admin?           @relation("AcceptedBy", fields: [acceptedById], references: [id])
+  invitedBy    Admin            @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+}
+
+model ServerAuthConfig {
+  id             String              @id @default(cuid())
+  server         McpServer           @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId       String              @unique
+  authType       ServerAuthType
+  jwtProvider   ServerJwtProvider? @relation(fields: [jwtProviderId], references: [id])
+  jwtProviderId String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+model ServerJwtProvider {
+  id         String    @id @default(cuid())
+  server     McpServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)  
+  tenantId   String
+  name       String
+  jwksUrl    String
+  enabled    Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  authConfigs ServerAuthConfig[]
+  
+  @@unique([serverId, name], name: "unique_server_provider_name")
+}
+
+enum AdminRole {
+  admin
+  superadmin
+  member
+}
+
+enum TenantRole {
+  member
+  admin
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  expired
+  cancelled
+}
+
+enum ServerAuthType {
+  BASE
+  JWT
+}
+
+enum ApiKeyLocation {
+  header
+  query
+  cookie
+}
+
+enum HttpMethod {
+  GET
+  POST
+  PUT
+  PATCH
+  DELETE
+}
