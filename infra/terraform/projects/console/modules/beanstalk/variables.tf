@@ -73,3 +73,9 @@ variable "backend_endpoint" {
   type        = string
   default     = ""
 }
+
+variable "single_instance_mode" {
+  description = "Whether to deploy as a single instance without load balancer (faster for staging)"
+  type        = bool
+  default     = false
+}

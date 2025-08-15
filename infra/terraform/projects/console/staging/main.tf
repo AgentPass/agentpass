@@ -56,6 +56,8 @@ module "beanstalk" {
   min_instances = var.min_instances
   max_instances = var.max_instances
   
+  single_instance_mode = true  # Use single instance for staging (faster deployment)
+  
   backend_endpoint = data.terraform_remote_state.backend.outputs.beanstalk_environment_endpoint
   
   environment_variables = {

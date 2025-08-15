@@ -65,6 +65,7 @@ module "beanstalk" {
   max_instances = var.max_instances
   
   is_public_facing = false  # CRITICAL: Must be false for isolation
+  single_instance_mode = true  # Use single instance for staging (faster deployment)
   
   environment_variables = {
     DB_HOST     = module.rds.db_instance_address

@@ -60,25 +60,37 @@ resource "aws_elastic_beanstalk_environment" "env" {
   setting {
     namespace = "aws:autoscaling:asg"
     name      = "MinSize"
-    value     = var.min_instances
+    value     = var.single_instance_mode ? "1" : tostring(var.min_instances)
   }
 
   setting {
     namespace = "aws:autoscaling:asg"
     name      = "MaxSize"
-    value     = var.max_instances
+    value     = var.single_instance_mode ? "1" : tostring(var.max_instances)
   }
 
   setting {
     namespace = "aws:elasticbeanstalk:environment"
-    name      = "LoadBalancerType"
-    value     = "application"
+    name      = "EnvironmentType"
+    value     = var.single_instance_mode ? "SingleInstance" : "LoadBalanced"
   }
 
-  setting {
-    namespace = "aws:elbv2:loadbalancer"
-    name      = "SecurityGroups"
-    value     = var.elb_security_group_id
+  dynamic "setting" {
+    for_each = var.single_instance_mode ? [] : [1]
+    content {
+      namespace = "aws:elasticbeanstalk:environment"
+      name      = "LoadBalancerType"
+      value     = "application"
+    }
+  }
+
+  dynamic "setting" {
+    for_each = var.single_instance_mode ? [] : [1]
+    content {
+      namespace = "aws:elbv2:loadbalancer"
+      name      = "SecurityGroups"
+      value     = var.elb_security_group_id
+    }
   }
 
   setting {

@@ -73,3 +73,9 @@ variable "is_public_facing" {
   type        = bool
   default     = false
 }
+
+variable "single_instance_mode" {
+  description = "Whether to deploy as a single instance without load balancer (faster for staging)"
+  type        = bool
+  default     = false
+}
