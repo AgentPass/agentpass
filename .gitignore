@@ -1,4 +1,5 @@
 # See http://help.github.com/ignore-files/ for more about ignoring files.
+#
 
 # compiled output
 dist
@@ -47,3 +48,26 @@ src/api/*.openapi.yaml
 !src/api/agentbridge.openapi.yaml
 
 **/CLAUDE.local.md
+
+
+# Terraform directories
+.terraform/
+.terraform.lock.hcl
+
+# State files
+*.tfstate
+*.tfstate.backup
+
+# Crash log
+crash.log
+
+# Variable overrides (often contain secrets)
+*.tfvars
+*.tfvars.json
+
+# Terraform plan output
+*.plan
+
+# Override files
+*_override.tf
+*_override.tf.json
