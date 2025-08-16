@@ -1,0 +1,148 @@
+name: Deploy Backend to Staging
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'apps/agentbridge-be/**'
+      - 'libs/agentbridge-utils/**'
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  AWS_REGION: us-east-2
+  EB_APPLICATION_NAME: backend
+  EB_ENVIRONMENT_NAME: staging
+  DOCKER_IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build application
+        run: yarn nx build @agentbridge/be -c production
+        env:
+          NODE_ENV: production
+
+      - name: Create deployment package
+        run: |
+          cd dist/apps/agentbridge-be
+          zip -r ../../../backend-staging.zip . -x "*.git*" "*.DS_Store*"
+          
+          # Create .ebextensions for environment configuration
+          mkdir -p ../../../.ebextensions
+          cd ../../..
+          
+          cat > .ebextensions/environment.config << EOF
+          option_settings:
+            aws:elasticbeanstalk:application:environment:
+              NODE_ENV: staging
+              DD_ENV: staging
+              DD_SERVICE: agentbridge-be
+              DD_VERSION: ${{ github.sha }}
+              DD_GIT_REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+              DD_GIT_COMMIT_SHA: ${{ github.sha }}
+            aws:elasticbeanstalk:environment:
+              EnvironmentType: SingleInstance
+            aws:autoscaling:asg:
+              MinSize: 1
+              MaxSize: 1
+          EOF
+          
+          # Add .ebextensions to the zip
+          zip -r backend-staging.zip .ebextensions/
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to Elastic Beanstalk
+        run: |
+          # Create application version
+          aws elasticbeanstalk create-application-version \
+            --application-name ${{ env.EB_APPLICATION_NAME }} \
+            --version-label "staging-${{ github.sha }}" \
+            --source-bundle S3Bucket="${{ secrets.EB_S3_BUCKET }},S3Key=backend-staging.zip" \
+            --region ${{ env.AWS_REGION }}
+          
+          # Wait for version to be processed
+          sleep 10
+          
+          # Update environment with new version
+          aws elasticbeanstalk update-environment \
+            --environment-name ${{ env.EB_ENVIRONMENT_NAME }} \
+            --version-label "staging-${{ github.sha }}" \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for deployment to complete..."
+          
+          # Wait for environment to be ready
+          while true; do
+            STATUS=$(aws elasticbeanstalk describe-environments \
+              --environment-names ${{ env.EB_ENVIRONMENT_NAME }} \
+              --region ${{ env.AWS_REGION }} \
+              --query 'Environments[0].Status' \
+              --output text)
+            
+            echo "Environment status: $STATUS"
+            
+            if [ "$STATUS" = "Ready" ]; then
+              echo "✅ Environment is ready!"
+              break
+            elif [ "$STATUS" = "Failed" ]; then
+              echo "❌ Environment deployment failed!"
+              exit 1
+            fi
+            
+            echo "Waiting 30 seconds..."
+            sleep 30
+          done
+
+      - name: Verify deployment
+        run: |
+          # Get environment info
+          aws elasticbeanstalk describe-environments \
+            --environment-names ${{ env.EB_ENVIRONMENT_NAME }} \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Environments[0]' \
+            --output table
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f backend-staging.zip
+          rm -rf .ebextensions
+
+      - name: Deployment Status
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Deployment to staging successful!"
+            echo "Environment: ${{ env.EB_ENVIRONMENT_NAME }}"
+            echo "Version: staging-${{ github.sha }}"
+            echo "Commit: ${{ github.sha }}"
+            echo "Branch: ${{ github.ref_name }}"
+          else
+            echo "❌ Deployment failed!"
+            exit 1
+          fi
